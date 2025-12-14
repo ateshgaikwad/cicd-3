@@ -9,7 +9,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<your-username>/jenkins-ci-demo.git'
+                git branch: 'main', url: 'https://github.com/ateshgaikwad/cicd-3.git'
             }
         }
 

@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "ateshgaikwad/cicd-3"
+        IMAGE = "ateshgaikwad/cicd-4"
+        EC2_HOST = "3.109.58.78"
     }
 
     stages {
@@ -15,9 +16,7 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh "docker build -t $DOCKER_IMAGE:${env.BUILD_NUMBER} ."
-                }
+                sh "docker build -t $IMAGE:${env.BUILD_NUMBER} ."
             }
         }
 
@@ -31,21 +30,30 @@ pipeline {
             }
         }
 
-        stage('Push Image to Docker Hub') {
+        stage('Push Image') {
             steps {
-                script {
-                    sh "docker push $DOCKER_IMAGE:${env.BUILD_NUMBER}"
+                sh "docker push $IMAGE:${env.BUILD_NUMBER}"
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                sshagent(['ec2-ssh']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST '
+                        docker pull $IMAGE:${env.BUILD_NUMBER} &&
+                        docker stop app || true &&
+                        docker rm app || true &&
+                        docker run -d -p 3000:3000 --name app $IMAGE:${env.BUILD_NUMBER}
+                    '
+                    """
                 }
             }
         }
     }
 
     post {
-        success {
-            echo "Docker Build & Push Successful!"
-        }
-        failure {
-            echo "Build failed!"
-        }
+        success { echo "CI/CD Pipeline Completed Successfully!" }
+        failure { echo "Pipeline Failed!" }
     }
 }
